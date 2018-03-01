@@ -1,0 +1,396 @@
+{% extends 'index.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+{% from 'bootstrap/pagination.html' import render_pagination %}
+
+<style>
+    {% block styles_extend %}
+        .form-control {
+            width: auto;
+        }
+        .row-md {
+            margin-bottom: 5px;
+        }
+
+        label {
+            font-size: smaller;
+        }
+    {% endblock %}
+</style>
+
+{% block content_extend %}
+    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        <button type="button" class="btn btn-ms btn-primary" id="search">
+            <span class="glyphicon glyphicon-search"></span>&nbsp;查询
+        </button>
+        {% if current_user.role_id  != 3 %}
+            <button type="button" class="btn btn-ms btn-success" id="add" data-toggle="modal"
+                    data-target="#part_setting">
+                <span class="glyphicon glyphicon-plus"></span>&nbsp;录入
+            </button>
+        {% endif %}
+        <div class="panel panel-default" id="storage_form" style="margin-top: 10px">
+            <div class="panel-body">
+                <div class="row row-md" style="margin-bottom: 8px">
+                    <div class="col-md-2">
+                        <label>设备分类：</label>
+                        <select class="form-control input-sm" name="catalog_id">
+                            <option value=""></option>
+                            {% for item in catalog %}
+                                <option value="{{ item.id }}">{{ item.catalog }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>设备名称：</label>
+                        <input type="text" name="part" class="form-control input-sm">
+                    </div>
+                    <div class="col-md-3">
+                        <label>设备编码：</label>
+                        <input type="text" name="id" class="form-control input-sm">
+                    </div>
+                    <div class="col-md-3">
+                        <label>出厂编号：</label>
+                        <input type="text" name="sn" class="form-control input-sm">
+                    </div>
+                    <div class="col-md-1">
+                        <label>状态：</label>
+                        <select class="form-control input-sm" name="state">
+                            <option value=""></option>
+                            <option value="好">好</option>
+                            <option value="坏">坏</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2">
+                        <label>使用人：</label>
+                        <input type="text" name="username" class="form-control input-sm">
+                    </div>
+                    <div class="col-md-3">
+                        <label>所在部门：</label>
+                        <input type="text" name="location" class="form-control input-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if pagination %}
+            <div class="container">{{ render_pagination(pagination) }}</div>
+            <table class="table table-striped" width="100%" style="font-size: smaller;table-layout: fixed"
+                   id="part_table">
+                <thead>
+                <tr>
+                    <th width="8%">设备编码</th>
+                    <th width="7%">类型</th>
+                    <th width="10%">设备名称</th>
+                    <th width="15%">规格/配置</th>
+                    <th width="13%">出厂编号</th>
+                    <th width="8%">采购时间</th>
+                    <th width="8%" class="right">设备原值</th>
+                    <th width="6%">使用人</th>
+                    <th width="9%">所在部门</th>
+                    <th width="4%">状态</th>
+                    <th width="5%">备注</th>
+                    {% if current_user.role_id  != 3 %}
+                        <th width="7%">操作</th>
+                    {% endif %}
+                </tr>
+                </thead>
+                <tbody>
+                {% for storage,catalog in storages %}
+                    <tr>
+                        <td><span name="id">{{ storage.id }}</span></td>
+                        <td><span>{{ catalog.catalog }}</span></td>
+                        <td><span>{{ storage.part }}</span></td>
+                        <td style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
+                            <span title="{{ storage.description }}">{{ storage.description }}</span>
+                        </td>
+                        <td><span>{{ storage.sn }}</span></td>
+                        <td><span>{{ storage.purchase_date|string|truncate(13,end='') }}</span></td>
+                        <td class="right"><span>{{ storage.price }}</span></td>
+                        <td><span>{{ storage.username }}</span></td>
+                        <td><span>{{ storage.location }}</span></td>
+                        <td><span>{{ storage.state }}</span></td>
+                        <td style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
+                            <span title="{{ storage.remark }}">{{ storage.remark }}</span>
+                        </td>
+                        {% if current_user.role_id  != 3 %}
+                            <td>
+
+                                <button type="button" class="btn btn-default btn-xs" data-toggle="modal"
+                                        data-target="#part_setting" title="设置"
+                                        btn="setting">
+                                    <span class="glyphicon glyphicon-cog"></span>
+                                </button>
+                                <button type="button" class="btn btn-default btn-xs" data-toggle="modal"
+                                        data-target="#part_setting" title="出库/入库"
+                                        btn="history">
+                                    <span class="glyphicon glyphicon-time"></span>
+                                </button>
+
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="container">{{ render_pagination(pagination) }}</div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+
+{% block modal_extend %}
+    <div class="modal fade" id="part_setting" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true" id="modal_close">&times;</span></button>
+                    <h3 class="modal-title" id="setting_title"></h3>
+                </div>
+                <div class="modal-body" id="setting_body"></div>
+                <div class="modal-footer">
+                    <span class="red" style="float: left;line-height: 34px">*红色栏位必须维护</span>
+                    <button type="button" class="btn btn-danger" title="删除">
+                        <span class="glyphicon glyphicon-trash"></span>&nbsp;删除
+                    </button>
+                    <button type="button" class="btn btn-success" title="提交">
+                        <span class="glyphicon glyphicon-saved"></span>&nbsp;提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/template" id="modal_tp">
+        <div class="row row-md" id="ifeidt">
+            <div class="col-md-5">
+                <label class="red">设备编号:</label>
+                <input type="text" name="id" class="form-control input-sm" value="{id}">
+            </div>
+        </div>
+        <div class="row row-md">
+            <div class="col-md-5">
+                <label class="red">设备名称:</label>
+                <input type="text" name="part" class="form-control input-sm" value="{part}">
+            </div>
+            <div class="col-md-7">
+                <label>规格/配置:</label>
+                <input type="text" name="description" class="form-control input-sm" value="{description}">
+            </div>
+        </div>
+        <div class="row row-md">
+            <div class="col-md-3">
+                <label class="red">设备分类:</label>
+                <select name="catalog_id" class="form-control input-sm"></select>
+            </div>
+            <div class="col-md-5">
+                <label>出厂编号:</label>
+                <input name="sn" type="text" class="form-control input-sm" value="{sn}">
+            </div>
+            <div class="col-md-4">
+                <label>采购时间:</label>
+                <input name="purchase_date" type="date" class="form-control input-sm" value="{purchase_date}"
+                       data-date-format="yyyy-mm-dd">
+            </div>
+        </div>
+        <div class="row row-md">
+            <div class="col-md-3">
+                <label>设备原值:</label>
+                <input name="price" type="text" class="form-control input-sm" value="{price}">
+            </div>
+            <div class="col-md-3"><label>使用人:</label><input name="username" type="text" disabled
+                                                            class="form-control input-sm" value="{username}">
+            </div>
+            <div class="col-md-4"><label>所在部门:</label><input name="location" type="text" disabled
+                                                             class="form-control input-sm" value="{location}">
+            </div>
+            <div class="col-md-2"><label>状态:</label>
+                <select name="state" class="form-control input-sm"></select>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-12"><label>备注:</label><input name="remark" type="text" class="form-control input-sm"
+                                                            value="{remark}">
+            </div>
+        </div>
+    </script>
+    <script type="text/template" id="history_tp">
+        <div class="row row-md" style="display: none">
+            <div class="col-md-5">
+                <label class="red">设备编号:</label>
+                <input type="text" name="id" disabled class="form-control input-sm" value="{id}">
+            </div>
+        </div>
+        <div class="row row-md">
+            <div class="col-md-5">
+                <label class="red">设备名称:</label>
+                <input type="text" name="part" disabled class="form-control input-sm" value="{part}">
+            </div>
+            <div class="col-md-7">
+                <label>规格/配置:</label>
+                <input type="text" name="description" disabled class="form-control input-sm" value="{description}">
+            </div>
+        </div>
+        <div class="row row-md">
+            <div class="col-md-3">
+                <label class="red">设备分类:</label>
+                <select name="catalog_id" disabled class="form-control input-sm"></select>
+            </div>
+            <div class="col-md-5">
+                <label>出厂编号:</label>
+                <input name="sn" type="text" disabled class="form-control input-sm" value="{sn}">
+            </div>
+            <div class="col-md-4">
+                <label>出库/入库时间:</label>
+                <input name="register_date" type="date" class="form-control input-sm" data-date-format="yyyy-mm-dd">
+            </div>
+        </div>
+        <div class="row row-md">
+            <div class="col-md-3"><label>使用人:</label><input name="username" type="text" {disabled}
+                                                            class="form-control input-sm" value="{username}">
+            </div>
+            <div class="col-md-4"><label>所在部门:</label><input name="location" type="text" {disabled}
+                                                             class="form-control input-sm" value="{location}">
+            </div>
+            <div class="col-md-2"><label>出库/入库:</label>
+                <select name="exit" class="form-control input-sm" disabled></select>
+            </div>
+        </div>
+    </script>
+{% endblock %}
+
+<script type="text/javascript">
+    {% block scripts_extend %}
+        $.each($('#storage_form [name]'), function () {
+            $(this).val(page[$(this).attr('name')])
+        });
+        var today = new Date();
+        today = today.format('yyyy-MM-dd');
+        var model_tp = $('#modal_tp').html(), ht_tp = $('#history_tp').html();
+        var addline = {purchase_date: today, username: '仓库', location: '仓库'};
+
+
+
+
+        //查询
+        $('#search').click(function () {
+            var para = {};
+            $.each($('#storage_form [name]'), function () {
+                para[$(this).attr('name')] = $(this).val();
+            });
+            $.get('/storage', function () {
+                var url = '/storage?query=Y&catalog_id={catalog_id}&part={part}&username={username}&sn={sn}&state={state}&location={location}&id={id}'.format(para);
+                window.location.href = url;
+            });
+        });
+        //新增
+        $('#add').click(function () {
+            $('#setting_title').text('');
+            $('#ifeidt').show();
+            $('#part_setting').find('.btn-danger').hide();
+            $('#setting_body').html(model_tp.format(addline));
+            $('#setting_body').find('select[name=catalog_id]').html($('#storage_form select[name=catalog_id]').html());
+            $('#setting_body').find('select[name=state]').append($("<option value='好'>好</option><option value='坏'>坏</option>"));
+            $('#part_setting .btn-success').unbind('click').bind('click', function () {
+                Save('insert')
+            });
+        });
+        //操作
+        $('button[btn]').each(function () {
+            if ($(this).attr('btn') == 'setting') {
+                var iflend;
+                $(this).bind('click', function (e) {
+                    var eles = $(e.target).closest('tr').find('[name=id]');
+                    var para = [{name: 'id', value: eles.text()}];
+                    $.post('/storage.detail', para, function (data) {
+                        iflend = data[0].location;
+                        $('#setting_title').text('编辑：' + data[0].id);
+                        var html = data.map(function (row) {
+                            for (var i in row) row[i] = row[i] == null ? '' : row[i]
+                            return model_tp.format(row)
+                        });
+                        $('#setting_body').html(html)
+                        $('#ifeidt').hide();
+                        $('#part_setting').find('.btn-danger,span.red').show();
+                        //不在仓库不允许删除
+                        if (iflend != '仓库') $('#part_setting .btn-danger').attr('disabled', 'disadbled')
+                        else $('#part_setting .btn-danger').removeAttr('disabled')
+                        $('#setting_body').find('select[name=catalog_id]').html($('#storage_form select[name=catalog_id]').html()).val(data[0].catalog_id)
+                        $('#setting_body').find('select[name=state]').append($("<option value='好'>好</option><option value='坏'>坏</option>")).val(data[0].state)
+                    });
+                    $('#part_setting .btn-success').unbind('click').bind('click', function () {
+                        Save('update')
+                    });
+                    $('#part_setting .btn-danger').unbind('click').bind('click', function () {
+                        if (confirm('是否要删除编号：{0} 的设备？'.format(eles.text()))) {
+                            $.post('/storage.delete', para, function (data) {
+                                if (data == 'ok') {
+                                    $('#modal_close').trigger('click');
+                                    setTimeout(function () {
+                                        $('#search').trigger('click')
+                                    }, 200);
+                                } else alert('用户未归还，无法删除')
+                            });
+                        }
+                    });
+
+                })
+            } else if ($(this).attr('btn') == 'history') {
+                $(this).bind('click', function (e) {
+                    var eles = $(e.target).closest('tr').find('[name=id]');
+                    var para = [{name: 'id', value: eles.text()}];
+                    $.post('/storage.detail', para, function (data) {
+                        $('#setting_title').text('设备：' + data[0].id);
+                        var html = data.map(function (row) {
+                            for (var i in row) row[i] = row[i] == null ? '' : row[i]
+                            return ht_tp.format(row)
+                        });
+                        $('#setting_body').html(html);
+                        $('#setting_body [name=register_date]').val(today);
+                        $('#setting_body label.red').removeClass('red');
+                        $('#part_setting').find('.btn-danger,span.red,#ifeidt').hide();
+                        $('#setting_body').find('select[name=catalog_id]').html($('#storage_form select[name=catalog_id]').html()).val(data[0].catalog_id)
+                        $('#setting_body').find('select[name=exit]').append($("<option value='1'>借</option><option value='0'>还</option>")).val(data[0].exit)
+                    });
+                    $('#part_setting .btn-success').unbind('click').bind('click', function () {
+                        Save('history')
+                    });
+                })
+            }
+        })
+
+        function Save(type) {
+            if (!confirm('是否确认提交？')) return;
+            var para = [], check = false;
+            $('#setting_body [name]').each(function () {
+                var name = $(this).attr('name'), val = $(this).val();
+                //检查填写
+                if ($.inArray(name, ['id', 'part', 'catalog_id']) > -1 && val == '') check = true;
+                if (name == 'price' && isNaN(Number(val))) check = true;
+                para.push({name: name, value: val});
+            });
+            if (check) return alert('设备编号、设备名称、分类不可为空!或者设备原值必须是数字！')
+            para.push({name: 'type', value: type})
+            $.post('/storage.save', para, function (data) {
+                if (data == 'ok') {
+                    $('#modal_close').trigger('click');
+                    setTimeout(function () {
+                        $('#search').trigger('click')
+                    }, 200);
+                } else if (data == 'exist') {
+                    return alert('设备编号已存在，无法重复添加！')
+                } else if (data == 'inactive') {
+                    return alert('不能出借给仓库！')
+                } else alert(data)
+            })
+        }
+
+        $('#storage_form input').keydown(function (e) {
+            if (e.keyCode == 13) $('#search').trigger('click')
+        })
+
+    {% endblock %}
+</script>
+
+
+

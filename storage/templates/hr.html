@@ -1,0 +1,200 @@
+{% extends 'index.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+<style>
+    {% block styles_extend %}
+        .form-control {
+            width: auto;
+        }
+        .row-md {
+            margin-bottom: 5px;
+        }
+
+        label {
+            font-size: smaller;
+        }
+    {% endblock %}
+</style>
+
+{% block content_extend %}
+    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        <button type="button" class="btn btn-ms btn-primary" id="search">
+            <span class="glyphicon glyphicon-search"></span>&nbsp;查询
+        </button>
+        <button type="button" class="btn btn-ms btn-success" id="addaccount" data-toggle="modal"
+                data-target="#hr_setting">
+            <span class="glyphicon glyphicon-plus"></span>&nbsp;新建账号
+        </button>
+        <div class="panel panel-default" id="hr_form" style="margin-top: 10px">
+            <div class="panel-body">
+                <div class="row row-md" style="margin-bottom: 8px">
+                    <div class="col-md-3">
+                        <label>用户名：</label>
+                        <input type="text" name="username" class="form-control input-sm">
+                    </div>
+                    <div class="col-md-2">
+                        <label>权限角色：</label>
+                        <select class="form-control input-sm" name="role_id">
+                            <option value=""></option>
+                            {% for item in power %}
+                                <option value="{{ item.id }}">{{ item.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if users %}
+            <table class="table table-striped" width="100%" style="font-size: smaller;"
+                   id="part_table">
+                <thead>
+                <tr>
+                    <th width="10%">ID</th>
+                    <th width="30%">用户名</th>
+                    <th width="30%">权限角色</th>
+                    {% if current_user.role_id  != 3 %}
+                        <th width="30%">操作</th>
+                    {% endif %}
+                </tr>
+                </thead>
+                <tbody>
+                {% for users,role_id in users %}
+                    <tr>
+                        <td><span name="id">{{ users.id }}</span></td>
+                        <td><span>{{ users.username }}</span></td>
+                        <td><span>{{ role_id }}</span></td>
+                        {% if current_user.role_id  != 3 %}
+                            <td>
+                                <button type="button" class="btn btn-default btn-xs" data-toggle="modal"
+                                        data-target="#hr_setting" title="设置"
+                                        btn="setting">
+                                    <span class="glyphicon glyphicon-cog"></span>
+                                </button>
+                            </td>
+                        {% endif %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </div>
+{% endblock %}
+
+{% block modal_extend %}
+    <div class="modal fade bs-example-modal-sm" id="hr_setting" tabindex="-1" role="dialog"
+         aria-labelledby="myModalLabel">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true" id="modal_close">&times;</span></button>
+                    <h4 class="modal-title">权限设置</h4>
+                </div>
+                <div class="modal-body" id="hr_body"></div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-info" title="重置密码">
+                        <span class="glyphicon glyphicon-repeat"></span>&nbsp;重置密码
+                    </button>
+                    <button type="button" class="btn btn-success" title="提交">
+                        <span class="glyphicon glyphicon-saved"></span>&nbsp;提交
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/template" id="hr_tp">
+        <div style="margin: 10px">
+            <div class="row">
+                <label>用户名:</label>
+                <input type="text" name="username" {disabled} class="form-control" value="{username}">
+                <input type="hidden" name="id" class="form-control" value="{id}">
+            </div>
+            <div class="row">
+                <label>角色权限:</label>
+                <select name="role_id" class="form-control" value="{role_id}"></select>
+            </div>
+        </div>
+    </script>
+{% endblock %}
+
+<script type="text/javascript">
+    {% block scripts_extend %}
+        $.each($('#hr_form [name]'), function () {
+            $(this).val(page[$(this).attr('name')])
+        });
+
+        $('#search').click(function () {
+            var para = {};
+            $.each($('#hr_form [name]'), function () {
+                para[$(this).attr('name')] = $(this).val();
+            });
+            $.get('/hr', function () {
+                var url = '/hr?query=Y&username={username}&role_id={role_id}'.format(para);
+                window.location.href = url;
+            });
+        });
+
+        $('#addaccount').click(function () {
+            $('#hr_setting h4').text('新建账户');
+            var html = [{}].map(function (row) {
+                return $('#hr_tp').html().format(row)
+            });
+            $('#hr_body').html(html)
+            $('#hr_body').find('select[name=role_id]').html($('#hr_form select[name=role_id]').html()).val('3')
+            $('#hr_setting .btn-success').unbind('click').bind('click', function () {
+                Save('new')
+            });
+            $('#hr_setting .btn-info').unbind('click').hide();
+        });
+
+        $('button[btn]').each(function () {
+            $(this).bind('click', function (e) {
+                var eles = $(e.target).closest('tr').find('[name=id]');
+                var para = [{name: 'id', value: eles.text()}];
+                $.post('/hr.detail', para, function (data) {
+                    data[0].disabled = 'disabled';
+                    $('#hr_title').text(data[0].id);
+                    var html = data.map(function (row) {
+                        for (var i in row) row[i] = row[i] == null ? '' : row[i]
+                        return $('#hr_tp').html().format(row)
+                    });
+                    $('#hr_body').html(html)
+                    $('#hr_body').find('select[name=role_id]').html($('#hr_form select[name=role_id]').html()).val(data[0].role_id)
+                });
+                $('#hr_setting .btn-success').unbind('click').bind('click', function () {
+                    Save('update')
+                });
+                $('#hr_setting .btn-info').unbind('click').bind('click', function () {
+                    Save('reset')
+                });
+            })
+        })
+
+        function Save(type) {
+            var msg;
+            if (type == 'reset') msg = '是否重置该用户的密码？';
+            else msg = '是否确认提交？';
+            if (!confirm(msg)) return;
+            if (!$('#hr_body [name=username]').val()) return alert('用户名空不可提交！');
+            var para = [];
+            $('#hr_body [name]').each(function () {
+                var name = $(this).attr('name'), val = $(this).val();
+                para.push({name: name, value: val});
+            });
+            para.push({name: 'type', value: type})
+            $.post('/hr.save', para, function (data) {
+                if (data == 'ok') {
+                    $('#modal_close').trigger('click');
+                    setTimeout(function () {
+                        $('#search').trigger('click')
+                    }, 200);
+                } else if (data == 'exist') {
+                    return alert('用户名已存在！');
+                } else return alert(data);
+            })
+        }
+    {% endblock %}
+</script>
+
+
+

@@ -1,0 +1,126 @@
+{% extends 'index.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+{% from 'bootstrap/pagination.html' import render_pagination %}
+
+<style>
+    {% block styles_extend %}
+        .form-control {
+            width: auto;
+        }
+        .row-md {
+            margin-bottom: 5px;
+        }
+
+        label {
+            font-size: smaller;
+        }
+    {% endblock %}
+</style>
+
+{% block content_extend %}
+    <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+        <button type="button" class="btn btn-ms btn-primary" id="search">
+            <span class="glyphicon glyphicon-search"></span>&nbsp;查询
+        </button>
+        <div class="panel panel-default" id="storage_form" style="margin-top: 10px">
+            <div class="panel-body">
+                <div class="row row-md" style="margin-bottom: 8px">
+                    <div class="col-md-2">
+                        <label>设备分类：</label>
+                        <select class="form-control input-sm" name="catalog_id">
+                            <option value=""></option>
+                            {% for item in catalog %}
+                                <option value="{{ item.id }}">{{ item.catalog }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label>设备名称：</label>
+                        <input type="text" name="part" class="form-control input-sm">
+                    </div>
+                    <div class="col-md-3">
+                        <label>设备编码：</label>
+                        <input type="text" name="id" class="form-control input-sm">
+                    </div>
+                    <div class="col-md-1">
+                        <label>状态：</label>
+                        <select class="form-control input-sm" name="state">
+                            <option value=""></option>
+                            <option value="借">借</option>
+                            <option value="还">还</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-2">
+                        <label>使用人：</label>
+                        <input type="text" name="username" class="form-control input-sm">
+                    </div>
+                    <div class="col-md-3">
+                        <label>所在部门：</label>
+                        <input type="text" name="location" class="form-control input-sm">
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% if pagination %}
+            <div class="container">{{ render_pagination(pagination) }}</div>
+            <table class="table table-striped" width="100%" style="font-size: smaller;"
+                   id="part_table">
+                <thead>
+                <tr>
+                    <th width="15%">领用日期</th>
+                    <th width="15%">领用人</th>
+                    <th width="15%">所在部门</th>
+                    <th width="10%">设备分类</th>
+                    <th width="15%">设备编号</th>
+                    <th width="20%">设备名称</th>
+                    <th width="10%">状态</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for st_history,part,catalog in historys %}
+                    <tr>
+                        <td><span>{{ st_history.register_date|string|truncate(13,end='') }}</span></td>
+                        <td><span>{{ st_history.username }}</span></td>
+                        <td><span>{{ st_history.location }}</span></td>
+                        <td><span>{{ catalog }}</span></td>
+                        <td><span>{{ st_history.part_id }}</span></td>
+                        <td><span>{{ part }}</span></td>
+                        <td><span>{{ st_history.state }}</span></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div class="container">{{ render_pagination(pagination) }}</div>
+        {% endif %}
+    </div>
+{% endblock %}
+
+<script type="text/javascript">
+    {% block scripts_extend %}
+        $.each($('#storage_form [name]'), function () {
+            $(this).val(page[$(this).attr('name')])
+        });
+
+        //查询
+        $('#search').click(function () {
+            var para = {};
+            $.each($('#storage_form [name]'), function () {
+                para[$(this).attr('name')] = $(this).val();
+            });
+            $.get('/history', function () {
+                var url = '/history?query=Y&catalog_id={catalog_id}&part={part}&username={username}&state={state}&location={location}&id={id}'.format(para);
+                window.location.href = url;
+            });
+        });
+
+         $('#storage_form input').keydown(function (e) {
+            if (e.keyCode == 13) $('#search').trigger('click')
+        })
+
+    {% endblock %}
+</script>
+
+
+

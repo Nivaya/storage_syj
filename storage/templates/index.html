@@ -1,0 +1,194 @@
+{% extends 'bootstrap/base.html' %}
+{% import 'bootstrap/wtf.html' as wtf %}
+
+{% block head %}
+    {{ super() }}
+{% endblock %}
+
+{% block styles %}
+    {{ super() }}
+
+    <style>
+        body {
+            padding-top: 70px;
+        }
+
+        .right {
+            text-align: right;
+        }
+
+        .red {
+            color: red;
+        }
+
+        {% block styles_extend %}
+        {% endblock %}
+    </style>
+    <link href="../static/img/favicon.ico" rel="icon" type="image/x-icon"/>
+    <link rel="stylesheet" href="../static/css/bootstrap.css">
+    <link rel="stylesheet" href="../static/css/dashboard.css">
+{% endblock %}
+
+{% block body %}
+    {{ super() }}
+    <!-- Modal -->
+    <div class="modal fade bs-example-modal-sm" id="loginModal" tabindex="-1" role="dialog"
+         aria-labelledby="myModalLabel">
+        <div class="modal-dialog modal-sm" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span
+                            aria-hidden="true">&times;</span></button>
+                    <h3 class="modal-title" id="myModalLabel">登录</h3>
+                </div>
+                <div class="modal-body">
+                    {% if para['iflogin']=='2' %}
+                        <div class="alert alert-success" role="alert">
+                            {{ get_flashed_messages(category_filter=["success"])[0] }}
+                        </div>
+                    {% elif para['iflogin']=='1' %}
+                        <div class="alert alert-danger" role="alert">
+                            {{ get_flashed_messages(category_filter=["error"])[0] }}
+                        </div>
+                    {% endif %}
+                    {{ wtf.quick_form(login_form) }}
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-3 col-md-2 sidebar" id="navbar_slide">
+                <ul class="nav nav-sidebar">
+                    <li type="index">
+                        <a href="{{ url_for('index') }}"><span class="glyphicon glyphicon-home"></span>&nbsp;首页</a>
+                    </li>
+                    <li type="storage">
+                        <a href="{{ url_for('storage') }}"><span class="glyphicon glyphicon-hdd"></span>&nbsp;库存查询</a>
+                    </li>
+                    <li type="history">
+                        <a href="{{ url_for('history') }}"><span class="glyphicon glyphicon-list-alt"></span>&nbsp;领用记录</a>
+                    </li>
+                </ul>
+                <ul class="nav nav-sidebar">
+                    {% if current_user.is_authenticated %}
+                        {% if current_user.role_id != 3 %}
+                            <li type="catalog">
+                                <a href="{{ url_for('catalog') }}">
+                                    <span class="glyphicon glyphicon-tags"></span>&nbsp;分类维护
+                                </a>
+                            </li>
+                        {% endif %}
+                        {% if current_user.role_id == 1 %}
+                            <li type="hr">
+                                <a href="{{ url_for('hr') }}">
+                                    <span class="glyphicon glyphicon-cog"></span>&nbsp;人员维护
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
+            </div>
+            {% block content_extend %}
+                <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
+                    <div class="container">
+                        <div class="page-header"><h1>欢迎使用 库存管理系统v1.0</h1></div>
+                        <p>请使用账号：guset</p>
+                        <p>密码：guset </p>
+                        <p>进行体验！</p>
+                    </div>
+                </div>
+            {% endblock %}
+        </div>
+    </div>
+    {% block modal_extend %}
+    {% endblock %}
+{% endblock %}
+
+{% block navbar %}
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar"
+                        aria-expanded="false" aria-controls="navbar">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+                <span class="navbar-brand"><span class="glyphicon glyphicon-th-large"></span>&nbsp;库存管理系统 v1.0</span>
+            </div>
+            <div id="navbar" class="collapse navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    {% if current_user.is_authenticated %}
+                        <li>
+                            <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button"
+                               aria-haspopup="true" aria-expanded="false">
+                                <span class="glyphicon glyphicon-user"></span>&nbsp;{{ current_user.username }}
+                                <span class="caret"></span>
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li id="change_pwd"><a href="#">修改密码</a></li>
+                            </ul>
+                        </li>
+                        <li><a href="{{ url_for('logout') }}">退出</a></li>
+                    {% else %}
+                        <li><a href="#" data-toggle="modal" data-target="#loginModal">
+                            <span class="glyphicon glyphicon-user"></span>&nbsp;登录
+                        </a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script type="text/javascript" src="../static/js/yrh.js"></script>
+    <script type="text/javascript">
+        var page = {};
+        $(function () {
+            page = {{page|safe}};
+
+            {#            $('#loginModal .checkbox').append('<label><a href="{{ url_for("register") }}">还有没有账号？点击注册</a></label>');#}
+            $('#loginModal form').append('<button type="button" class="btn btn-danger" data-dismiss="modal">取消</button>');
+
+            var para = {};
+            para['iflogin'] = '{{ para.iflogin }}' == 'default' ? null : '{{ para.iflogin }}';
+            para['page'] = '{{ para.page }}';
+            if (para.iflogin) {
+                $('#loginModal').modal();
+                $('#loginModal').modal('show');
+            }
+            $('#navbar_slide li').each(function () {
+                if ($(this).attr('type') == para['page']) $(this).addClass('active');
+            });
+            $('#change_pwd').click(function () {
+                var pwd1 = prompt('新密码：');
+                if (!pwd1) return;
+                var pwd2 = prompt('确认密码：');
+                if (pwd1 != pwd2) return alert('两次密码不一致，修改失败！');
+                $.post('/hr.save', [{name: 'id', value: '{{ current_user.id }}'},
+                    {name: 'role_id', value: '{{ current_user.role_id }}'},
+                    {name: 'type', value: 'chpwd'},
+                    {name: 'chpwd', value: pwd1}], function (data) {
+                    alert(data);
+                    return $.post('/logout', function () {
+                        window.location.reload()
+                    });
+                });
+            })
+            if (page.ifedit == 'N') {
+                $('button').attr('disabled', 'disadbled');
+                $('#change_pwd').trigger('click');
+            }
+
+            {% block scripts_extend %}
+            {% endblock %}
+        })
+    </script>
+{% endblock %}
