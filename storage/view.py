@@ -141,7 +141,7 @@ def init_views(app):
     # 详情
     @app.route('/storage.detail', methods=['POST'])
     @login_required
-    def detial():
+    def detail():
         if g.user.role_id == 3:
             return 'Powerless'
         para = {'id': request.form.get('id')}
@@ -184,6 +184,16 @@ def init_views(app):
                 # 不填默认今天
                 'register_date': request.form.get('register_date') or datetime.datetime.today().strftime('%Y-%m-%d'),
                 'engname': g.user.username}
+        # 批量返还
+        ids = request.form.getlist('ids')
+        print ids
+        if len(ids):
+            for i in ids:
+                para['id'] = i
+                sql = u"call history_p(:id, '仓库', '仓库', '0', :register_date, :engname);"
+                db.session.execute(sql, para)
+                db.session.commit()
+            return u'批量返还ok'
         if para['stype'] == 'update':
             sql = '''
                 UPDATE stdb.storage st
@@ -215,7 +225,7 @@ def init_views(app):
             print para
             if para['location'] == u'仓库' and para['ext'] == '1':
                 return 'inactive'
-            sql = 'call history_p(:id, :username, :location, :ext, :register_date,:engname);'
+            sql = u'call history_p(:id, :username, :location, :ext, :register_date,:engname);'
         db.session.execute(sql, para)
         db.session.commit()
         return 'ok'

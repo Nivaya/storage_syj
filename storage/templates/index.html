@@ -24,7 +24,7 @@
         {% block styles_extend %}
         {% endblock %}
     </style>
-    <link href="../static/img/favicon.ico" rel="icon" type="image/x-icon"/>
+    <link href="../static/img/package.ico" rel="icon" type="image/x-icon"/>
     <link rel="stylesheet" href="../static/css/bootstrap.css">
     <link rel="stylesheet" href="../static/css/dashboard.css">
 {% endblock %}
@@ -95,10 +95,12 @@
             {% block content_extend %}
                 <div class="col-sm-9 col-sm-offset-3 col-md-10 col-md-offset-2 main">
                     <div class="container">
-                        <div class="page-header"><h1>欢迎使用 库存管理系统v1.0</h1></div>
+                        <div class="page-header"><h1>欢迎使用 库存管理系统v1.1</h1></div>
+                        <!--
                         <p>请使用账号：guset</p>
                         <p>密码：guset </p>
                         <p>进行体验！</p>
+                        -->
                     </div>
                 </div>
             {% endblock %}
@@ -149,6 +151,7 @@
 {% block scripts %}
     {{ super() }}
     <script type="text/javascript" src="../static/js/yrh.js"></script>
+    <script type="text/javascript" src="../static/js/BootstrapMenu.min.js"></script>
     <script type="text/javascript">
         var page = {};
         $(function () {

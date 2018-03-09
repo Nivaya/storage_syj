@@ -16,10 +16,9 @@ login_manager.login_message_category = 'error'
 def create_app(db_info):
     app = Flask(__name__)
     app.secret_key = 'secury code'
-    # app.debug = True
+    app.debug = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://' + db_info + '/stdb'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = True
-    # app.config['SQLALCHEMY_COMMIT_ON_TEARDOWN'] = True
 
     db.init_app(app)
     bootstrap.init_app(app)

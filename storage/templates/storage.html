@@ -79,13 +79,14 @@
                    id="part_table">
                 <thead>
                 <tr>
+                    <th width="2%">#</th>
                     <th width="8%">设备编码</th>
                     <th width="7%">类型</th>
                     <th width="10%">设备名称</th>
                     <th width="15%">规格/配置</th>
                     <th width="13%">出厂编号</th>
                     <th width="8%">采购时间</th>
-                    <th width="8%" class="right">设备原值</th>
+                    <th width="6%" class="right">原值</th>
                     <th width="6%">使用人</th>
                     <th width="9%">所在部门</th>
                     <th width="4%">状态</th>
@@ -98,6 +99,9 @@
                 <tbody>
                 {% for storage,catalog in storages %}
                     <tr>
+                        <td><input type="checkbox" name="line" value="{{ storage.id }}"
+                                   {% if storage.username=='仓库' and storage.location=='仓库' %}disabled="disabled"{% endif %}>
+                        </td>
                         <td><span name="id">{{ storage.id }}</span></td>
                         <td><span>{{ catalog.catalog }}</span></td>
                         <td><span>{{ storage.part }}</span></td>
@@ -115,7 +119,6 @@
                         </td>
                         {% if current_user.role_id  != 3 %}
                             <td>
-
                                 <button type="button" class="btn btn-default btn-xs" data-toggle="modal"
                                         data-target="#part_setting" title="设置"
                                         btn="setting">
@@ -126,7 +129,6 @@
                                         btn="history">
                                     <span class="glyphicon glyphicon-time"></span>
                                 </button>
-
                             </td>
                         {% endif %}
                     </tr>
@@ -264,12 +266,47 @@
         $.each($('#storage_form [name]'), function () {
             $(this).val(page[$(this).attr('name')])
         });
-        var today = new Date();
+        var today = new Date(), chooseflag = false;
         today = today.format('yyyy-MM-dd');
         var model_tp = $('#modal_tp').html(), ht_tp = $('#history_tp').html();
         var addline = {purchase_date: today, username: '仓库', location: '仓库'};
 
-
+        //右键菜单
+        new BootstrapMenu('#part_table', {
+            actions: [{
+                name: '批量返还',
+                onClick: function () {
+                    var para = [], warniglines = [];
+                    $.each($('#part_table input:checked'), function () {
+                        para.push({name: 'ids', value: $(this).val()})
+                        warniglines.push($(this).val())
+                    })
+                    if (!confirm('是否要归还：' + warniglines)) return;
+                    if (!para.length) return alert('没有选择行!')
+                    $.post('/storage.save', para, function (data) {
+                        if (data == '批量返还ok') {
+                            $('#search').trigger('click');
+                        }
+                    })
+                }
+            }, {
+                name: '取消',
+                onClick: function () {
+                    return;
+                }
+            }, {
+                name: '全选/全不选',
+                onClick: function () {
+                    if (!chooseflag) {
+                        $('#part_table input:checkbox').not($('#part_table input:disabled')).prop('checked', true);
+                        chooseflag = true;
+                    } else {
+                        $('#part_table input:checkbox').not($('#part_table input:disabled')).prop('checked', false);
+                        chooseflag = false;
+                    }
+                }
+            }]
+        });
 
 
         //查询
@@ -384,7 +421,7 @@
                 } else alert(data)
             })
         }
-
+        //回车时间
         $('#storage_form input').keydown(function (e) {
             if (e.keyCode == 13) $('#search').trigger('click')
         })
