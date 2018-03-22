@@ -210,6 +210,16 @@
                 <select name="state" class="form-control input-sm"></select>
             </div>
         </div>
+        <div class="row row-md" id="addattrs" hidden>
+            <div class="col-md-3">
+                <input name="attr1" type="checkbox" value="Y">
+                <label id="attr1">属性1:</label>
+            </div>
+            <div class="col-md-3">
+                <input name="attr2" type="checkbox" value="Y">
+                <label id="attr2">属性2:</label>
+            </div>
+        </div>
         <div class="row">
             <div class="col-md-12"><label>备注:</label><input name="remark" type="text" class="form-control input-sm"
                                                             value="{remark}">
@@ -326,7 +336,26 @@
             $('#ifeidt').show();
             $('#part_setting').find('.btn-danger').hide();
             $('#setting_body').html(model_tp.format(addline));
-            $('#setting_body').find('select[name=catalog_id]').html($('#storage_form select[name=catalog_id]').html());
+            $('#setting_body').find('select[name=catalog_id]').html($('#storage_form select[name=catalog_id]').html()).bind('change', function () {
+                var catalog = $('option:selected', this).text();
+                $('#addattrs input:checkbox').prop('checked', false);
+                //如果是指定类型，则显示勾选项，类型勾选项仅新录入有效
+                if ($.inArray(catalog, ['笔记本电脑', '主机']) > -1) {
+                    $('#addattrs').show();
+                    switch (catalog) {
+                        case '笔记本电脑':
+                            $('#attr1').text('电源适配器');
+                            $('#attr2').text('鼠标');
+                            break;
+                        case '主机':
+                            $('#attr1').text('鼠标');
+                            $('#attr2').text('键盘');
+                            break;
+                        default:
+                            return
+                    }
+                } else $('#addattrs').hide();
+            }).trigger('click');
             $('#setting_body').find('select[name=state]').append($("<option value='好'>好</option><option value='坏'>坏</option>"));
             $('#part_setting .btn-success').unbind('click').bind('click', function () {
                 Save('insert')
@@ -354,6 +383,11 @@
                         else $('#part_setting .btn-danger').removeAttr('disabled')
                         $('#setting_body').find('select[name=catalog_id]').html($('#storage_form select[name=catalog_id]').html()).val(data[0].catalog_id)
                         $('#setting_body').find('select[name=state]').append($("<option value='好'>好</option><option value='坏'>坏</option>")).val(data[0].state)
+                        //管理员去除disabled
+                        var roleid ={{current_user.role_id}};
+                        if (roleid == 1) {
+                            $('#setting_body [name]').filter(':disabled').prop("disabled", false)
+                        }
                     });
                     $('#part_setting .btn-success').unbind('click').bind('click', function () {
                         Save('update')
@@ -398,22 +432,25 @@
 
         function Save(type) {
             if (!confirm('是否确认提交？')) return;
-            var para = [], check = false;
+            var check = false;
             $('#setting_body [name]').each(function () {
                 var name = $(this).attr('name'), val = $(this).val();
                 //检查填写
                 if ($.inArray(name, ['id', 'part', 'catalog_id']) > -1 && val == '') check = true;
                 if (name == 'price' && isNaN(Number(val))) check = true;
-                para.push({name: name, value: val});
             });
             if (check) return alert('设备编号、设备名称、分类不可为空!或者设备原值必须是数字！')
+            if ($('#setting_body').find('[name=location]').val() == '仓库' && type == 'history')
+                return alert('不能出借给仓库！')
+            $('#setting_body [name]').filter(':disabled').prop("disabled", false)
+            var para = $('#setting_body [name]').serializeArray();
             para.push({name: 'type', value: type})
             $.post('/storage.save', para, function (data) {
                 if (data == 'ok') {
                     $('#modal_close').trigger('click');
                     setTimeout(function () {
                         $('#search').trigger('click')
-                    }, 200);
+                    }, 250);
                 } else if (data == 'exist') {
                     return alert('设备编号已存在，无法重复添加！')
                 } else if (data == 'inactive') {

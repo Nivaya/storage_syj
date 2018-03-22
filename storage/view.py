@@ -4,6 +4,7 @@ from form import LoginForm, RegisterForm
 from flask_login import login_user, logout_user, login_required, current_user
 from datetime import datetime
 from model import User, Storage, Catalog, History, Role
+from api import Api
 from . import db
 import json
 import datetime
@@ -166,27 +167,18 @@ def init_views(app):
         if g.user.role_id == 3:
             return 'Powerless'
         sql = ''
-        para = {'catalog_id': request.form.get('catalog_id', ''),
-                'part': request.form.get('part', ''),
-                'id': request.form.get('id', ''),
-                'sn': request.form.get('sn', ''),
-                'username': request.form.get('username', ''),
-                'location': request.form.get('location', ''),
-                'state': request.form.get('state', ''),
-                'description': request.form.get('description', ''),
-                # 不填默认今天
-                'purchase_date': request.form.get('purchase_date') or datetime.datetime.today().strftime('%Y-%m-%d'),
-                # 不填默认0元
-                'price': request.form.get('price') or 0,
-                'remark': request.form.get('remark', ''),
-                'stype': request.form.get('type', ''),
-                'ext': request.form.get('exit', ''),
-                # 不填默认今天
-                'register_date': request.form.get('register_date') or datetime.datetime.today().strftime('%Y-%m-%d'),
-                'engname': g.user.username}
+        para = Api.reqs('catalog_id,part,id,sn,username,location,state,description,'
+                        'remark,type,exit,attr1,attr2')
+        para.update({
+            # 不填默认今天
+            'purchase_date': request.form.get('purchase_date') or datetime.datetime.today().strftime('%Y-%m-%d'),
+            # 不填默认0元
+            'price': request.form.get('price') or 0,
+            # 不填默认今天
+            'register_date': request.form.get('register_date') or datetime.datetime.today().strftime('%Y-%m-%d'),
+            'engname': g.user.username})
         # 批量返还
         ids = request.form.getlist('ids')
-        print ids
         if len(ids):
             for i in ids:
                 para['id'] = i
@@ -194,11 +186,10 @@ def init_views(app):
                 db.session.execute(sql, para)
                 db.session.commit()
             return u'批量返还ok'
-        if para['stype'] == 'update':
+        if para['type'] == 'update':
             sql = '''
                 UPDATE stdb.storage st
-                    SET st.username=:username,
-                        st.state=:state,
+                    SET st.state=:state,
                         st.sn=:sn,
                         st.price=:price,
                         st.description=:description,
@@ -206,26 +197,53 @@ def init_views(app):
                         st.remark=:remark,
                         st.part=:part,
                         st.purchase_date=:purchase_date,
-                        st.location=:location,
+                        {0}
                         st.modify_date=now(),
                         st.modify_user=:engname
                     WHERE st.id=:id
-            '''
-        elif para['stype'] == 'insert':
+            '''.format('st.username=:username,st.location=:location,' if g.user.role_id == 1 else '')
+        elif para['type'] == 'insert':
             checkid = Storage.query.filter_by(id=para['id']).all()
             if len(checkid):
                 return 'exist'
-            sql = '''
-            INSERT INTO stdb.storage
-            (id,username,state,sn,price,description,catalog_id,remark,part,purchase_date,location,create_user,create_date)
-            VALUE
-            (:id,:username,:state,:sn,:price,:description,:catalog_id,:remark,:part,:purchase_date,:location,:engname,now())
-            '''
-        elif para['stype'] == 'history':
-            print para
-            if para['location'] == u'仓库' and para['ext'] == '1':
+            # 笔记本&主机类型
+            if para['attr1'] or para['attr2']:
+                power = Catalog.query.filter_by(catalog=u'电源适配器').first().id
+                mouse = Catalog.query.filter_by(catalog=u'鼠标').first().id
+                keyboard = Catalog.query.filter_by(catalog=u'键盘').first().id
+                special_ct = Catalog.query.filter_by(id=para['catalog_id']).first().catalog
+                if special_ct in [u'笔记本电脑', u'主机']:
+                    obj = [
+                        Storage(id=para['id'], username=u'仓库', state=para['state'], sn=para['sn'],
+                                price=para['price'], part=para['part'],
+                                description=para['description'], catalog_id=para['catalog_id'], remark=para['remark'],
+                                purchase_date=para['purchase_date'], location=u'仓库',
+                                create_user=para['engname']),
+                        Storage(id=para['id'] + '-01', username=u'仓库', state=para['state'], sn=para['sn'],
+                                part=para['part'] + (u'-电源适配器' if special_ct == u'笔记本电脑' else u'-鼠标'),
+                                catalog_id=power if special_ct == u'笔记本电脑' else mouse,
+                                remark=para['remark'], price=0, description=para['description'],
+                                purchase_date=para['purchase_date'], location=u'仓库',
+                                create_user=para['engname']) if para['attr1'] else None,
+                        Storage(id=para['id'] + '-02', username=u'仓库', state=para['state'], sn=para['sn'],
+                                part=para['part'] + (u'-鼠标' if special_ct == u'笔记本电脑' else u'-键盘'),
+                                catalog_id=mouse if special_ct == u'笔记本电脑' else keyboard,
+                                remark=para['remark'], description=para['description'], price=0,
+                                purchase_date=para['purchase_date'], location=u'仓库',
+                                create_user=para['engname'] if para['attr2'] else None)
+                    ]
+                    db.session.add_all([i for i in obj if i])
+                    db.session.commit()
+                    return 'ok'
+            else:
+                sql = u'''
+                INSERT INTO stdb.storage (id,username,state,sn,price,description,catalog_id,remark,part,purchase_date,location,create_user,create_date)
+                VALUE (:id,'仓库',:state,:sn,:price,:description,:catalog_id,:remark,:part,:purchase_date,'仓库',:engname,now())
+                '''
+        elif para['type'] == 'history':
+            if para['location'] == u'仓库' and para['exit'] == '1':
                 return 'inactive'
-            sql = u'call history_p(:id, :username, :location, :ext, :register_date,:engname);'
+            sql = u'call history_p(:id, :username, :location, :exit, :register_date,:engname);'
         db.session.execute(sql, para)
         db.session.commit()
         return 'ok'
